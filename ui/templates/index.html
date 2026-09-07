@@ -1,0 +1,436 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ARIA - Astronaut Research Interaction Assistant</title>
+  <link rel="stylesheet" href="/static/css/stitch_space.css">
+</head>
+<body>
+
+  <!-- =========================================================================
+       TOP COCKPIT TELEMETRY & FLIGHT BAR
+       ========================================================================= -->
+  <header class="cockpit-topbar">
+    <div class="brand-section">
+      <div class="station-badge">STATION-ALPHA // ISS-EXP-71</div>
+      <h1 class="system-title">ARIA • ASTRONAUT RESEARCH INTERACTION ASSISTANT</h1>
+    </div>
+
+    <div class="telemetry-strip">
+      <!-- MET Mission Elapsed Time Clock -->
+      <div class="met-clock-card">
+        <div class="met-label">MISSION ELAPSED TIME (<span id="hud-flight-day">FD-04</span>)</div>
+        <div class="met-time" id="hud-met-clock">MET +04:05:45:00</div>
+      </div>
+
+      <!-- Orbital Info -->
+      <div class="status-indicator-pill" id="hud-orbit-los">
+        <span class="status-dot"></span>
+        ORBIT 418 KM | LOS 14M
+      </div>
+
+      <!-- 100% Offline Airgap Badge -->
+      <div class="airgap-pill" title="Fully local edge deployment without external cloud dependency">
+        🔒 100% LOCAL AIRGAP
+      </div>
+
+      <!-- Ground Control Sync Badge & Trigger -->
+      <button class="status-indicator-pill" id="btn-sync-ground" title="Trigger Flight Data Recorder uplink">
+        📡 <span id="hud-sync-badge">0 PENDING UPLINK</span>
+      </button>
+
+      <!-- Hands-free VOX Mode Toggle -->
+      <div class="voice-vox-toggle" id="vox-toggle-btn" title="Toggle continuous hands-free voice recognition">
+        <span>VOX</span>
+        <div class="vox-switch" id="vox-switch-ui">
+          <div class="vox-thumb"></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- =========================================================================
+       MULTI-TIER SAFETY ALERT BANNER
+       ========================================================================= -->
+  <div class="alert-banner-container" id="alert-banner-container" style="display:none;">
+    <div class="alert-banner tier-3" id="alert-banner">
+      <div class="alert-left-content">
+        <div class="alert-icon-wrap" id="alert-icon">🚨</div>
+        <div class="alert-details">
+          <h4 id="alert-title">[TIER 3 CRITICAL] PROTOCOL SAFETY VIOLATION</h4>
+          <p id="alert-desc">Mandatory Life Sciences Glovebox negative pressure test was skipped. Operation halted.</p>
+        </div>
+      </div>
+      <div class="alert-actions">
+        <button class="btn-cockpit btn-ack" id="btn-alert-ack">ACKNOWLEDGE</button>
+        <button class="btn-cockpit btn-override" id="btn-alert-override">OVERRIDE</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MAIN 3-COLUMN COCKPIT HUD
+       ========================================================================= -->
+  <main class="cockpit-main">
+
+    <!-- COLUMN 1: 7 EXPERIMENTS, VISION SUITE & EMERGENCIES -->
+    <aside class="panel-column">
+      
+      <!-- 7 Microgravity Experiments -->
+      <div class="cockpit-card">
+        <div class="card-header">
+          <h3>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/></svg>
+            7 MICROGRAVITY EXPERIMENTS
+          </h3>
+        </div>
+        <div class="card-body" style="padding:10px;">
+          <div class="experiments-list" id="experiments-list">
+            <!-- Populated dynamically via app.js -->
+          </div>
+        </div>
+      </div>
+
+      <!-- ARIA Vision & Mission Control Tools -->
+      <div class="cockpit-card vision-card">
+        <div class="card-header">
+          <h3 style="color:var(--cyan-telemetry);">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            ARIA VISION & MISSION TOOLS
+          </h3>
+        </div>
+        <div class="card-body vision-body">
+          <button class="btn-vision primary" id="btn-launch-activity1">
+            <span class="vision-btn-icon">▶</span>
+            <div class="vision-btn-text">
+              <strong>ACTIVITY 1: BIO-PROTOCOL</strong>
+              <small>Holistic Pose + Hands + Face Movement Tracker</small>
+            </div>
+          </button>
+          
+          <div class="vision-btn-grid">
+            <button class="btn-vision secondary" id="btn-launch-analyzer">
+              <span>🎯 POSE ANALYZER</span>
+              <small>5s Biomechanics Scan</small>
+            </button>
+            <button class="btn-vision secondary" id="btn-open-collect-modal">
+              <span>📹 DATA COLLECTOR</span>
+              <small>Record Landmarks</small>
+            </button>
+            <button class="btn-vision secondary" id="btn-launch-train">
+              <span>⚡ RETRAIN MODEL</span>
+              <small>Zero-G Random Forest</small>
+            </button>
+            <button class="btn-vision secondary" id="btn-open-reports">
+              <span>📁 REPORTS LOG</span>
+              <small>Open Reports Folder</small>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Emergency Quick Action Deck -->
+      <div class="cockpit-card">
+        <div class="card-header">
+          <h3 style="color:#ff6b85;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ff6b85" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            EMERGENCY CONTINGENCIES
+          </h3>
+        </div>
+        <div class="card-body">
+          <div class="emergency-grid" id="emergency-grid">
+            <!-- Populated dynamically via app.js -->
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- COLUMN 2: ACTIVE PROTOCOL STEPPER & SAFETY ENGINE -->
+    <section class="protocol-stage">
+      
+      <!-- Experiment Overview & Meta Card -->
+      <div class="active-protocol-header">
+        <div class="protocol-top-meta">
+          <div class="active-exp-id" id="protocol-exp-id">EXP-01 // VOY-TARDIGRADE</div>
+          <div class="active-safety-pill" id="protocol-safety-level">Tier 2 - Bio-Cryo Precaution</div>
+        </div>
+        <h2 class="active-exp-title" id="protocol-exp-title">Voyager Tardigrade: Microgravity Survival & Transcriptome Study</h2>
+        <p class="active-exp-objective" id="protocol-exp-objective">Investigate cryptobiosis revival dynamics, DNA repair fidelity, and differential transcriptome expression of eutardigrades under cosmic ionizing radiation and microgravity.</p>
+
+        <!-- Environmental & Hazard Strip -->
+        <div class="protocol-env-strip" id="protocol-env-strip">
+          <!-- Populated dynamically via app.js -->
+        </div>
+
+        <!-- Progress Track -->
+        <div class="protocol-progress-wrap">
+          <div class="progress-track">
+            <div class="progress-fill" id="protocol-progress-fill" style="width: 0%;"></div>
+          </div>
+          <div class="progress-text" id="protocol-progress-text">0% COMPLETED (0/6)</div>
+        </div>
+      </div>
+
+      <!-- ACTIVE STEP CARD (PRIMARY TOUCH TARGET) -->
+      <div class="active-step-card" id="active-step-card">
+        <div class="step-card-header">
+          <div class="step-number-badge" id="step-card-badge">STEP 1 OF 6</div>
+          <div class="step-timer-box">
+            <div class="timer-dot"></div>
+            <span>STEP DURATION:</span>
+            <strong id="step-timer-display">00:00</strong>
+          </div>
+        </div>
+
+        <h3 class="step-headline" id="step-headline">LSG Airlock Verification & Glove Integrity Check</h3>
+
+        <div class="step-instruction-box" id="step-instruction-box">
+          Inspect Life Sciences Glovebox negative pressure barrier (-0.5 in. w.g.) and execute gauntlet pinhole inspection before transferring Tardigrade Cassette #01.
+        </div>
+
+        <!-- Hazard Warning Callout -->
+        <div class="step-hazard-box" id="step-hazard-box">
+          <div class="hazard-icon">⚠️</div>
+          <div class="hazard-content">
+            <h5>PROTOCOL SAFETY CHECKPOINT</h5>
+            <p id="step-warning-text">Do not open outer airlock if LSG delta pressure is above -0.2 in. w.g.</p>
+          </div>
+        </div>
+
+        <!-- ZERO-G GLOVE TOUCH ACTION BUTTONS -->
+        <div class="step-action-bar">
+          <button class="btn-cockpit btn-confirm" id="btn-confirm-step">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+            CONFIRM & ADVANCE STEP
+          </button>
+          <button class="btn-cockpit btn-skip" id="btn-skip-step">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+            REPORT DEVIATION / SKIP
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP ROADMAP CHECKLIST -->
+      <div class="cockpit-card">
+        <div class="card-header">
+          <h3>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            PROTOCOL EXECUTION ROADMAP
+          </h3>
+          <span style="font-size:0.75rem;color:var(--text-secondary);font-family:var(--font-mono);">CLICK TO INSPECT PREREQUISITES</span>
+        </div>
+        <div class="card-body">
+          <div class="step-checklist" id="step-checklist">
+            <!-- Populated dynamically via app.js -->
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- COLUMN 3: HOLOGRAPHIC OFFLINE AI ASSISTANT & TELEMETRY GAUGES -->
+    <aside class="panel-column">
+
+      <!-- AI ASSISTANT & VOICE HUD -->
+      <div class="cockpit-card assistant-hud">
+        <div class="voice-hud-header">
+          <div class="assistant-identity">
+            <div class="ai-avatar-ring" id="ai-avatar-ring">
+              <div class="ai-core-dot"></div>
+            </div>
+            <div>
+              <div style="font-size:0.85rem;font-weight:800;color:var(--text-bright);letter-spacing:0.5px;">ARIA • AI ASSISTANT</div>
+              <div style="font-size:0.68rem;color:var(--cyan-telemetry);font-family:var(--font-mono);">OFFLINE INFERENCE READY</div>
+            </div>
+          </div>
+          <div class="status-indicator-pill" style="padding:3px 8px;font-size:0.7rem;">AIRGAPPED</div>
+        </div>
+
+        <!-- Procedural Audio Visualizer Bar -->
+        <div class="audio-visualizer-bar" id="audio-wave-bar">
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+        </div>
+
+        <!-- Chat Conversation Transcript -->
+        <div class="chat-transcript" id="chat-transcript">
+          <div class="chat-bubble bot">
+            <span class="bubble-sender">ARIA • ASTRONAUT ASSISTANT</span>
+            <div class="bubble-content">
+              Welcome Commander Rathore. I am ARIA, your fully offline astronaut interaction assistant for Station Alpha. 
+              All <strong>7 official microgravity experiments</strong>, mission schedules, and emergency SOPs are indexed locally.
+              You can speak hands-free with VOX mode or use the quick command chips below.
+            </div>
+          </div>
+        </div>
+
+        <!-- Tactical Command Chips -->
+        <div class="command-chips">
+          <button class="chip-btn" data-cmd="Next step">▶ Next Step</button>
+          <button class="chip-btn" data-cmd="Confirm step">✓ Confirm Step</button>
+          <button class="chip-btn" data-cmd="What are the safety hazards for this step?">⚠️ Safety Warning</button>
+          <button class="chip-btn" data-cmd="Report station telemetry">📊 Telemetry Status</button>
+          <button class="chip-btn" data-cmd="What is the schedule for today?">📅 Mission Schedule</button>
+          <button class="chip-btn" data-cmd="Launch activity 1">🚀 Launch Activity 1</button>
+        </div>
+
+        <!-- Input Bar with Voice PTT & Text Input -->
+        <form class="chat-input-bar" id="chat-form">
+          <button type="button" class="btn-icon-touch btn-voice-record" id="btn-voice-record" title="Push-to-Talk Hands-Free Microphone">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+          </button>
+          <input type="text" class="input-field" id="chat-input-text" placeholder="Speak command or type query..." autocomplete="off">
+          <button type="submit" class="btn-icon-touch" title="Transmit">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </form>
+      </div>
+
+      <!-- LIVE ENVIRONMENTAL & FACILITY SENSORS CARD -->
+      <div class="cockpit-card">
+        <div class="card-header">
+          <h3>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+            HABITAT & FACILITY SENSORS
+          </h3>
+        </div>
+        <div class="card-body">
+          <div class="telemetry-grid-card">
+            <div class="sensor-tile" id="sensor-o2">
+              <span class="sensor-name">CABIN O2</span>
+              <span class="sensor-val nominal">21.1%</span>
+            </div>
+            <div class="sensor-tile" id="sensor-co2">
+              <span class="sensor-name">CABIN CO2</span>
+              <span class="sensor-val nominal">0.34%</span>
+            </div>
+            <div class="sensor-tile" id="sensor-press">
+              <span class="sensor-name">PRESSURE</span>
+              <span class="sensor-val nominal">101.3 kPa</span>
+            </div>
+            <div class="sensor-tile" id="sensor-microg">
+              <span class="sensor-name">MICRO-G JITTER</span>
+              <span class="sensor-val nominal">1.18e-6 g</span>
+            </div>
+            <div class="sensor-tile" id="sensor-rad">
+              <span class="sensor-name">COSMIC RAD</span>
+              <span class="sensor-val nominal">22.4 µSv/h</span>
+            </div>
+            <div class="sensor-tile" id="sensor-lsg">
+              <span class="sensor-name">LSG NEG-PRES</span>
+              <span class="sensor-val nominal">-0.52 in.wg</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </aside>
+  </main>
+
+  <!-- =========================================================================
+       MODAL 1: STEP SKIP & SAFETY OVERRIDE
+       ========================================================================= -->
+  <div class="modal-overlay" id="skip-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>⚠️ PROTOCOL DEVIATION / STEP OVERRIDE</h3>
+        <button class="btn-icon-touch modal-close-btn" id="btn-close-skip-modal">✕</button>
+      </div>
+      <form id="skip-override-form">
+        <div class="modal-body">
+          <p style="color:var(--text-secondary);font-size:0.9rem;">
+            Skipping or altering a microgravity scientific step requires mandatory crew logging. This deviation will be digitally signed and placed in the Ground Control uplink queue.
+          </p>
+          <div style="background:var(--bg-card);padding:12px;border-radius:var(--radius-sm);font-family:var(--font-mono);font-size:0.85rem;" id="modal-step-info">
+            Step 1: LSG Airlock Verification
+          </div>
+          <div>
+            <label style="display:block;font-size:0.8rem;color:var(--text-secondary);margin-bottom:6px;">OPERATIONAL JUSTIFICATION (REQUIRED):</label>
+            <input type="text" class="input-field" id="skip-reason-input" placeholder="e.g. LSG seal previously verified during EXP-01 session" required style="width:100%;">
+          </div>
+          <div>
+            <label style="display:block;font-size:0.8rem;color:var(--text-secondary);margin-bottom:6px;">COMMANDER OVERRIDE AUTHORIZATION CODE:</label>
+            <input type="text" class="input-field" id="skip-auth-code" value="AUTH-EVA-01" required style="width:100%;font-family:var(--font-mono);">
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-cockpit" id="btn-cancel-skip">CANCEL</button>
+          <button type="submit" class="btn-cockpit btn-override-confirm">AUTHORIZE SKIP & LOG</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL 2: EMERGENCY CONTINGENCY ACTION CARD
+       ========================================================================= -->
+  <div class="modal-overlay" id="emergency-modal">
+    <div class="modal-card" style="max-width:680px;">
+      <div class="modal-header danger">
+        <h3 id="emergency-modal-title">🚨 EMERGENCY CONTINGENCY PROTOCOL</h3>
+        <button class="btn-icon-touch modal-close-btn" id="btn-close-emerg-modal">✕</button>
+      </div>
+      <div class="modal-body" id="emergency-modal-body">
+        <!-- Filled dynamically -->
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-cockpit btn-ack" id="btn-ack-emerg">ACKNOWLEDGE EMERGENCY ACTIONS</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL 3: DATASET RECORDING ACTION PICKER
+       ========================================================================= -->
+  <div class="modal-overlay" id="collect-modal">
+    <div class="modal-card" style="max-width:540px;">
+      <div class="modal-header">
+        <h3>📹 COLLECT TRAINING DATASET</h3>
+        <button class="btn-icon-touch modal-close-btn" id="btn-close-collect-modal">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="color:var(--text-secondary);font-size:0.9rem;">
+          Select target activity to record 33 MediaPipe 3D pose landmarks into <code>data/dataset.csv</code>.
+        </p>
+        <div class="quick-action-chips" style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+          <button class="chip-btn action-chip" data-act="Walking">Walking</button>
+          <button class="chip-btn action-chip" data-act="Typing">Typing</button>
+          <button class="chip-btn action-chip" data-act="Drinking">Drinking</button>
+          <button class="chip-btn action-chip" data-act="ShakingHands">ShakingHands</button>
+          <button class="chip-btn action-chip" data-act="Idle">Idle</button>
+        </div>
+        <div>
+          <label style="display:block;font-size:0.8rem;color:var(--text-secondary);margin-bottom:6px;">ACTIVITY NAME:</label>
+          <input type="text" class="input-field" id="collect-action-input" value="Walking" style="width:100%;font-size:1.1rem;font-weight:700;">
+        </div>
+        <p style="font-size:0.8rem;color:var(--cyan-telemetry);margin-top:8px;">
+          ℹ Target: ~180-200 frames. Hold SPACEBAR in OpenCV window to record.
+        </p>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-cockpit" id="btn-cancel-collect">CANCEL</button>
+        <button type="button" class="btn-cockpit btn-confirm" id="btn-start-collect" style="background:var(--cyan-telemetry);color:#070b12;">START RECORDING</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Toast -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- SCRIPTS -->
+  <script src="/static/js/voice_engine.js"></script>
+  <script src="/static/js/telemetry_hud.js"></script>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
